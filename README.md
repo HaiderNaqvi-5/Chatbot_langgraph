@@ -1,89 +1,111 @@
-# FastAPI + LangChain + Groq + PostgreSQL chat backend
+﻿# Chatbot LangGraph API
 
-Simple chat API. Replies come from Groq through LangChain. Every turn is stored in PostgreSQL.
+A FastAPI chat backend built with LangChain, LangGraph, Groq, and PostgreSQL. It stores conversations and messages in the database, then uses an LLM workflow to generate responses.
 
-## Stack
+## Features
 
-| Layer | Choice |
-|---|---|
-| Web framework | FastAPI |
-| LLM provider | Groq |
-| LLM glue | LangChain |
-| Database | PostgreSQL 16 |
-| ORM | Tortoise ORM (asyncpg) |
-| Settings | pydantic-settings |
-| Tests | pytest + httpx |
+- REST API for creating conversations and sending messages
+- Groq-hosted LLM integration via LangChain
+- LangGraph orchestration for chat workflow
+- PostgreSQL persistence for conversation history
+- FastAPI docs available at `/docs`
+- Pytest-based test suite with mocked LLM behavior
 
-## Folder structure
+## Tech stack
 
+- Python 3.11+
+- FastAPI
+- LangChain
+- LangGraph
+- Groq
+- PostgreSQL
+- Tortoise ORM
+- Pydantic Settings
+- Pytest
+
+## Project structure
+
+```text
+Chatbot_langgraph/
+├── controllers/          # API route handlers
+├── helpers/              # settings, DB config, dependency setup
+├── models/               # database models
+├── services/             # LLM, chat workflow, history logic
+├── utils/                # request/response schemas
+├── tests/                # automated tests
+├── main.py               # FastAPI app entrypoint
+├── requirements.txt      # Python dependencies
+├── .env                  # local environment secrets (not committed)
+├── .gitignore            # git exclusions
+├── README.md             # project overview and setup guide
+├── pyproject.toml        # Python project metadata/config
+└── .env.example          # example environment file
 ```
-main.py                 # uvicorn entrypoint
-models/                 # Tortoise models
-controllers/            # HTTP routes
-services/               # business logic + Groq
-helpers/                # settings, db, deps
-utils/                  # Pydantic request/response schemas
-tests/                  # pytest
-.env                    # local secrets + DATABASE_URL
-```
 
-## Quick start
+## Prerequisites
+
+- Python 3.11+
+- PostgreSQL database running locally or on a reachable host
+- Groq API key
+
+## Setup
 
 ```bash
+cd C:\Users\Admin\Chatbot_langgraph
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements-dev.txt
-
-# paste your GROQ_API_KEY into .env
-# keep a local Postgres running, then start the API
-
-uvicorn main:app --reload
-# open http://127.0.0.1:8000/docs
+pip install -r requirements.txt
 ```
 
-Postgres is only the connection string in `.env` — no Docker:
+Copy `.env.example` to `.env` and fill in the required values:
 
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:your_password@127.0.0.1:5432/chatdb
+groq_api_key=your_groq_api_key
+groq_model=llama-3.1-8b-instant
+groq_temperature=0.2
+groq_max_tokens=512
+groq_timeout_seconds=30
+system_prompt=You are a helpful assistant.
 ```
-DATABASE_URL=postgres://postgres:1122@127.0.0.1:5433/chatdb
-```
 
-Tables are created on first startup (`generate_schemas=True`).
-
-## Try it
+## Run the app
 
 ```bash
-curl -X POST localhost:8000/api/v1/conversations \
-  -H "content-type: application/json" \
-  -d "{\"title\":\"FastAPI doubts\",\"owner_id\":\"student_01\"}"
-
-curl -X POST localhost:8000/api/v1/conversations/<ID>/chat \
-  -H "content-type: application/json" \
-  -d "{\"message\":\"Explain dependency injection.\"}"
+uvicorn main:app --reload
 ```
 
-## Tests
+Open:
+
+- API docs: http://127.0.0.1:8000/docs
+- Redoc: http://127.0.0.1:8000/redoc
+
+## Example API usage
+
+Create a conversation:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/conversations \
+  -H "Content-Type: application/json" \
+  -d '{"title":"FastAPI doubts","owner_id":"student_01"}'
+```
+
+Send a message:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/conversations/<conversation_id>/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Explain dependency injection in simple terms."}'
+```
+
+## Testing
 
 ```bash
 pytest -q
 ```
 
-Tests never call Groq. A fake LLM is injected through FastAPI dependency overrides.
+## Notes
 
-
-## LangGraph workflow
-
-The non-streaming `POST /conversations/{conversation_id}/chat` endpoint now runs through a LangGraph workflow:
-
-```text
-START
-  ↓
-load_history
-  ↓
-generate_reply (Groq / LangChain)
-  ↓
-persist_turn (Postgres)
-  ↓
-END
-```
-
-The existing `/chat/stream` endpoint keeps its LangChain streaming path so token-by-token SSE behavior is unchanged.
+- This app uses a LangGraph workflow for processing chat requests.
+- The project is structured for local development and production-like deployment via environment-level configuration.
+- Tests avoid calling Groq directly by overriding the LLM dependency.
