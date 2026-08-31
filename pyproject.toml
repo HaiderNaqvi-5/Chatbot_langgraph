@@ -1,0 +1,17 @@
+[project]
+name = "fastapi-chat-groq"
+version = "1.0.0"
+requires-python = ">=3.11"
+
+[tool.tortoise]
+tortoise_orm = "helpers.db.TORTOISE_ORM"
+location = "./migrations"
+src_folder = "./."
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
