@@ -13,15 +13,17 @@ from services.graph.state import ChatState, LoanStateExtraction
 async def load_history_node(state: ChatState) -> dict:
     return {"history": await load_history(state["conversation_id"])}
 
+# Initialize once at the module level to avoid recreation overhead
+_extract_llm = ChatGroq(
+    model=settings.groq_model,
+    temperature=0.0, # STRICT: 0.0 prevents extraction hallucinations
+    max_tokens=settings.groq_max_tokens,
+    timeout=settings.groq_timeout_seconds
+)
+_structured_llm = _extract_llm.with_structured_output(LoanStateExtraction)
+
 async def extract_data_node(state: ChatState) -> dict:
     started = time.perf_counter()
-    llm = ChatGroq(
-        model=settings.groq_model, 
-        temperature=0.0, # STRICT: 0.0 prevents extraction hallucinations
-        max_tokens=settings.groq_max_tokens,
-        timeout=settings.groq_timeout_seconds
-    )
-    structured_llm = llm.with_structured_output(LoanStateExtraction)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", settings.system_prompt),
@@ -30,7 +32,7 @@ async def extract_data_node(state: ChatState) -> dict:
     ])
 
     try:
-        extracted: LoanStateExtraction = await (prompt | structured_llm).ainvoke({
+        extracted: LoanStateExtraction = await (prompt | _structured_llm).ainvoke({
             "history": state.get("history", []),
             "input": state["user_text"]
         })
