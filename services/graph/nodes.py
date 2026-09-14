@@ -1,6 +1,5 @@
 import time
 from pydantic import ValidationError # NEW IMPORT
-from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
 from tortoise.transactions import in_transaction
