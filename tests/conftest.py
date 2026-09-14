@@ -18,7 +18,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel  # noqa: E402
 from langchain_core.messages import AIMessage  # noqa: E402
 from langchain_core.output_parsers import StrOutputParser  # noqa: E402
-from tortoise import Tortoise  # noqa: E402
+from tortoise import Tortoise, context  # noqa: E402
 
 from helpers.deps import message_chain, text_chain  # noqa: E402
 from main import app  # noqa: E402
@@ -42,6 +42,10 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides[message_chain] = lambda: CHAT_PROMPT | _fake_llm()
     app.dependency_overrides[text_chain] = lambda: CHAT_PROMPT | _fake_llm() | StrOutputParser()
 
+    try:
+        context._global_context = None
+    except Exception:
+        pass
     async with LifespanManager(app):
         await Tortoise.generate_schemas(safe=True)
         conn = Tortoise.get_connection("default")
@@ -50,5 +54,9 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
+    try:
+        context._global_context = None
+    except Exception:
+        pass
 
     app.dependency_overrides.clear()
