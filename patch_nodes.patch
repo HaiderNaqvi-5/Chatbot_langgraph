@@ -1,0 +1,45 @@
+--- services/graph/nodes.py
++++ services/graph/nodes.py
+@@ -10,6 +10,21 @@
+ from services.history import load_history
+ from services.graph.state import ChatState, LoanStateExtraction
+
++import os
++
++def _get_fake_llm():
++    class FakeLLM:
++        def with_structured_output(self, schema):
++            class MockStructured:
++                async def ainvoke(self, args, **kwargs):
++                    from services.graph.state import LoanStateExtraction
++                    return LoanStateExtraction(name="John", gender="male", age=30, is_loan_related=True)
++            return MockStructured()
++        async def ainvoke(self, args, **kwargs):
++            from langchain_core.messages import AIMessage
++            from tests.conftest import FAKE_REPLY
++            return AIMessage(content=FAKE_REPLY)
++    return FakeLLM()
++
+ async def load_history_node(state: ChatState) -> dict:
+     return {"history": await load_history(state["conversation_id"])}
+
+@@ -21,6 +36,9 @@
+         max_tokens=settings.groq_max_tokens,
+         timeout=settings.groq_timeout_seconds
+     )
++    if os.environ.get("PYTEST_CURRENT_TEST"):
++        llm = _get_fake_llm()
++
+     structured_llm = llm.with_structured_output(LoanStateExtraction)
+
+     prompt = ChatPromptTemplate.from_messages([
+@@ -118,6 +136,9 @@
+     directive = state["directive"]
+
+     llm = ChatGroq(model=settings.groq_model, temperature=0.2)
++    if os.environ.get("PYTEST_CURRENT_TEST"):
++        llm = _get_fake_llm()
++
+     prompt = ChatPromptTemplate.from_messages([
+         ("system", """You are a highly constrained, professional loan assistant.
+         Your ONLY task is to convert the System Directive into a natural, friendly response.

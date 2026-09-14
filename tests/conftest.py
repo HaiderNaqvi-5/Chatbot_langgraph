@@ -7,7 +7,7 @@ first time it is constructed.
 import os
 
 os.environ.setdefault(
-    "DATABASE_URL", "postgres://postgres:1122@127.0.0.1:5433/chatdb"
+    "DATABASE_URL", "sqlite://:memory:"
 )
 
 from collections.abc import AsyncGenerator  # noqa: E402
@@ -45,7 +45,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     async with LifespanManager(app):
         await Tortoise.generate_schemas(safe=True)
         conn = Tortoise.get_connection("default")
-        await conn.execute_script('TRUNCATE "message", "conversation" CASCADE;')
+        await conn.execute_script('DELETE FROM "message"; DELETE FROM "conversation";')
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
