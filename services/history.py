@@ -17,9 +17,11 @@ async def load_history(conversation_id) -> list[BaseMessage]:
     """Read the thread from Postgres and hand LangChain a list of messages."""
     rows = await (
         Message.filter(conversation_id=conversation_id)
-        .order_by("created_at")
+        .order_by("-created_at")
+        .limit(settings.history_token_budget)
         .values("role", "content")
     )
+    rows.reverse()
     messages = [_TO_LC[Role(r["role"])](r["content"]) for r in rows]
     return trim_history(messages)
 
