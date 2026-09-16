@@ -6,23 +6,21 @@ first time it is constructed.
 
 import os
 
-os.environ.setdefault(
-    "DATABASE_URL", "postgres://postgres:1122@127.0.0.1:5433/chatdb"
-)
+os.environ.setdefault("DATABASE_URL", "postgres://postgres:1122@127.0.0.1:5433/chatdb")
 
-from collections.abc import AsyncGenerator  # noqa: E402
+from collections.abc import AsyncGenerator
 
-import pytest  # noqa: E402
-from asgi_lifespan import LifespanManager  # noqa: E402
-from httpx import ASGITransport, AsyncClient  # noqa: E402
-from langchain_core.language_models.fake_chat_models import GenericFakeChatModel  # noqa: E402
-from langchain_core.messages import AIMessage  # noqa: E402
-from langchain_core.output_parsers import StrOutputParser  # noqa: E402
-from tortoise import Tortoise  # noqa: E402
+import pytest
+from asgi_lifespan import LifespanManager
+from httpx import ASGITransport, AsyncClient
+from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+from langchain_core.messages import AIMessage
+from langchain_core.output_parsers import StrOutputParser
+from tortoise import Tortoise
 
-from helpers.deps import message_chain, text_chain  # noqa: E402
-from main import app  # noqa: E402
-from services.llm import CHAT_PROMPT  # noqa: E402
+from helpers.deps import message_chain, text_chain
+from main import app
+from services.llm import CHAT_PROMPT
 
 FAKE_REPLY = "This is a canned reply."
 
