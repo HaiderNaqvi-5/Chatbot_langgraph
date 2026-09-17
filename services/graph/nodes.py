@@ -1,5 +1,6 @@
 import time
-from pydantic import ValidationError # NEW IMPORT
+from functools import lru_cache
+from pydantic import ValidationError
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
@@ -10,24 +11,57 @@ from models import Conversation, Message, Role
 from services.history import load_history
 from services.graph.state import ChatState, LoanStateExtraction
 
+
+@lru_cache
+def get_extract_llm() -> ChatGroq:
+    return ChatGroq(
+        model=settings.groq_model, 
+        temperature=0.0, # STRICT: 0.0 prevents extraction hallucinations
+        max_tokens=settings.groq_max_tokens,
+        timeout=settings.groq_timeout_seconds,
+        api_key=settings.groq_api_key or None,
+    )
+
+
+@lru_cache
+def get_extract_prompt() -> ChatPromptTemplate:
+    return ChatPromptTemplate.from_messages([
+        ("system", settings.system_prompt),
+        ("placeholder", "{history}"),
+        ("human", "{input}")
+    ])
+
+
+@lru_cache
+def get_reply_llm() -> ChatGroq:
+    return ChatGroq(
+        model=settings.groq_model,
+        temperature=0.2,
+        api_key=settings.groq_api_key or None,
+    )
+
+
+@lru_cache
+def get_reply_prompt() -> ChatPromptTemplate:
+    return ChatPromptTemplate.from_messages([
+        ("system", """You are a highly constrained, professional loan assistant.
+        Your ONLY task is to convert the System Directive into a natural, friendly response.
+
+        CRITICAL GUARDRAILS:
+        1. DO NOT invent numbers or ask questions that are not in the directive.
+        2. ALWAYS use 'Rs.' for currency. NEVER use the Indian Rupee symbol (₹)."""),
+        ("human", "System Directive: {directive}")
+    ])
+
+
 async def load_history_node(state: ChatState) -> dict:
     return {"history": await load_history(state["conversation_id"])}
 
 async def extract_data_node(state: ChatState) -> dict:
     started = time.perf_counter()
-    llm = ChatGroq(
-        model=settings.groq_model, 
-        temperature=0.0, # STRICT: 0.0 prevents extraction hallucinations
-        max_tokens=settings.groq_max_tokens,
-        timeout=settings.groq_timeout_seconds
-    )
+    llm = get_extract_llm()
     structured_llm = llm.with_structured_output(LoanStateExtraction)
-
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", settings.system_prompt),
-        ("placeholder", "{history}"),
-        ("human", "{input}")
-    ])
+    prompt = get_extract_prompt()
 
     try:
         extracted: LoanStateExtraction = await (prompt | structured_llm).ainvoke({
@@ -120,16 +154,8 @@ async def calculate_loan_node(state: ChatState) -> dict:
 async def generate_reply_node(state: ChatState) -> dict:
     directive = state["directive"]
     
-    llm = ChatGroq(model=settings.groq_model, temperature=0.2)
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a highly constrained, professional loan assistant. 
-        Your ONLY task is to convert the System Directive into a natural, friendly response.
-        
-        CRITICAL GUARDRAILS:
-        1. DO NOT invent numbers or ask questions that are not in the directive.
-        2. ALWAYS use 'Rs.' for currency. NEVER use the Indian Rupee symbol (₹)."""),
-        ("human", "System Directive: {directive}")
-    ])
+    llm = get_reply_llm()
+    prompt = get_reply_prompt()
     
     response = await (prompt | llm).ainvoke({"directive": directive})
     return {"ai_message": response}
