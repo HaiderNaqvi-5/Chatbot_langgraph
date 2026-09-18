@@ -6,9 +6,7 @@ first time it is constructed.
 
 import os
 
-os.environ.setdefault(
-    "DATABASE_URL", "postgres://postgres:1122@127.0.0.1:5433/chatdb"
-)
+os.environ.setdefault("DATABASE_URL", "postgres://postgres:1122@127.0.0.1:5433/chatdb")
 
 from collections.abc import AsyncGenerator  # noqa: E402
 
@@ -22,7 +20,7 @@ from tortoise import Tortoise  # noqa: E402
 
 from helpers.deps import message_chain, text_chain  # noqa: E402
 from main import app  # noqa: E402
-from services.llm import CHAT_PROMPT  # noqa: E402
+from services.llm import get_chat_prompt  # noqa: E402
 
 FAKE_REPLY = "This is a canned reply."
 
@@ -39,8 +37,10 @@ def _fake_llm() -> GenericFakeChatModel:
 
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
-    app.dependency_overrides[message_chain] = lambda: CHAT_PROMPT | _fake_llm()
-    app.dependency_overrides[text_chain] = lambda: CHAT_PROMPT | _fake_llm() | StrOutputParser()
+    app.dependency_overrides[message_chain] = lambda: get_chat_prompt() | _fake_llm()
+    app.dependency_overrides[text_chain] = lambda: (
+        get_chat_prompt() | _fake_llm() | StrOutputParser()
+    )
 
     async with LifespanManager(app):
         await Tortoise.generate_schemas(safe=True)

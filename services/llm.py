@@ -9,13 +9,18 @@ from langchain_groq import ChatGroq
 
 from helpers.config import settings
 
-CHAT_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        ("system", settings.system_prompt),
-        MessagesPlaceholder("history", optional=True),
-        ("human", "{input}"),
-    ]
-)
+
+@lru_cache
+def get_chat_prompt() -> ChatPromptTemplate:
+    # ⚡ Bolt Optimization: Cache the ChatPromptTemplate instance to avoid
+    # initialization overhead on every prompt usage and avoid top-level Pydantic validation errors.
+    return ChatPromptTemplate.from_messages(
+        [
+            ("system", settings.system_prompt),
+            MessagesPlaceholder("history", optional=True),
+            ("human", "{input}"),
+        ]
+    )
 
 
 @lru_cache
@@ -34,10 +39,10 @@ def get_llm() -> ChatGroq:
 @lru_cache
 def get_message_chain() -> Runnable:
     """prompt | llm  ->  RunnableSequence[dict, AIMessage]."""
-    return CHAT_PROMPT | get_llm()
+    return get_chat_prompt() | get_llm()
 
 
 @lru_cache
 def get_text_chain() -> Runnable:
     """prompt | llm | parser  ->  RunnableSequence[dict, str]."""
-    return CHAT_PROMPT | get_llm() | StrOutputParser()
+    return get_chat_prompt() | get_llm() | StrOutputParser()
