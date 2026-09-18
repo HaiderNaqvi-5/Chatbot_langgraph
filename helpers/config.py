@@ -26,15 +26,15 @@ class Settings(BaseSettings):
     history_token_budget: int = 3000
 
     # These are now required to be in the .env file
-    database_url: str 
+    database_url: str
     groq_api_key: str = Field(description="Set GROQ_API_KEY in .env")
-    
+
     # Model config and settings
-    groq_model: str 
+    groq_model: str
     groq_temperature: float
     groq_max_tokens: int
     groq_timeout_seconds: float
-    
+
     # System instructions
     system_prompt: str
 
