@@ -42,9 +42,7 @@ async def list_messages(
 ) -> list[Message]:
     if not await Conversation.exists(id=conversation_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Conversation not found")
-    return await (
-        Message.filter(conversation_id=conversation_id).order_by("created_at").limit(limit)
-    )
+    return await Message.filter(conversation_id=conversation_id).order_by("created_at").limit(limit)
 
 
 @router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
