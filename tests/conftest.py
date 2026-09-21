@@ -23,6 +23,7 @@ from tortoise import Tortoise  # noqa: E402
 from helpers.deps import message_chain, text_chain  # noqa: E402
 from main import app  # noqa: E402
 from services.llm import CHAT_PROMPT  # noqa: E402
+from services.graph import nodes  # noqa: E402
 
 FAKE_REPLY = "This is a canned reply."
 
@@ -39,8 +40,27 @@ def _fake_llm() -> GenericFakeChatModel:
 
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
+    from langchain_core.messages import AIMessage
+
     app.dependency_overrides[message_chain] = lambda: CHAT_PROMPT | _fake_llm()
     app.dependency_overrides[text_chain] = lambda: CHAT_PROMPT | _fake_llm() | StrOutputParser()
+
+    # Mock the graph nodes chains
+    original_get_extract_chain = nodes.get_extract_chain
+    original_get_generate_chain = nodes.get_generate_chain
+
+    # Needs to return a mock chain that has .ainvoke
+    class MockExtractChain:
+        async def ainvoke(self, *args, **kwargs):
+            from services.graph.state import LoanStateExtraction
+            return LoanStateExtraction()
+
+    class MockGenerateChain:
+        async def ainvoke(self, *args, **kwargs):
+            return AIMessage(FAKE_REPLY)
+
+    nodes.get_extract_chain = lambda: MockExtractChain()
+    nodes.get_generate_chain = lambda: MockGenerateChain()
 
     async with LifespanManager(app):
         await Tortoise.generate_schemas(safe=True)
@@ -52,3 +72,5 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
             yield ac
 
     app.dependency_overrides.clear()
+    nodes.get_extract_chain = original_get_extract_chain
+    nodes.get_generate_chain = original_get_generate_chain
