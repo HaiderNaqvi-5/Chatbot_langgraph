@@ -1,0 +1,3 @@
+## 2024-05-15 - Instantiating LangChain LLM Clients per request is slow
+**Learning:** Instantiating LangChain components (e.g., `ChatGroq` and `ChatPromptTemplate`) on every graph node execution or function call introduces significant overhead (~70ms per turn), which impacts performance.
+**Action:** Use `@lru_cache` on getter functions to cache these instances (e.g. `ChatGroq` client instances and prompt templates). Avoid declaring them as module-level global variables directly to defer Pydantic validation (e.g., checking for API keys) until execution time, preventing import-time errors during tests.
