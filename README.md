@@ -1,6 +1,8 @@
-# Chatbot LangGraph API
+# FlowChat API
 
 > A persistent FastAPI chat backend that uses LangGraph and Groq to generate and stream replies while keeping conversation history in PostgreSQL.
+
+Repository: [HaiderNaqvi-5/FlowChat-API](https://github.com/HaiderNaqvi-5/FlowChat-API)
 
 A FastAPI chat backend built with LangChain, LangGraph, Groq, and PostgreSQL. It stores conversations and messages in the database, then uses an LLM workflow to generate responses.
 
@@ -62,8 +64,8 @@ Chatbot_langgraph/
 Clone the repository and enter it:
 
 ```bash
-git clone https://github.com/HaiderNaqvi-5/Chatbot_langgraph.git
-cd Chatbot_langgraph
+git clone https://github.com/HaiderNaqvi-5/FlowChat-API.git
+cd FlowChat-API
 ```
 
 Create and activate a virtual environment:
