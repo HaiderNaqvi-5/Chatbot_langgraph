@@ -1,4 +1,6 @@
-﻿# Chatbot LangGraph API
+# Chatbot LangGraph API
+
+> A persistent FastAPI chat backend that uses LangGraph and Groq to generate and stream replies while keeping conversation history in PostgreSQL.
 
 A FastAPI chat backend built with LangChain, LangGraph, Groq, and PostgreSQL. It stores conversations and messages in the database, then uses an LLM workflow to generate responses.
 
@@ -10,6 +12,13 @@ A FastAPI chat backend built with LangChain, LangGraph, Groq, and PostgreSQL. It
 - PostgreSQL persistence for conversation history
 - FastAPI docs available at `/docs`
 - Pytest-based test suite with mocked LLM behavior
+
+## Request flow
+
+```text
+Create conversation → send a message → load stored history → LangGraph workflow → Groq response
+                                                               └→ save user and assistant messages
+```
 
 ## Tech stack
 
@@ -50,10 +59,29 @@ Chatbot_langgraph/
 
 ## Setup
 
+Clone the repository and enter it:
+
 ```bash
-cd C:\Users\Admin\Chatbot_langgraph
+git clone https://github.com/HaiderNaqvi-5/Chatbot_langgraph.git
+cd Chatbot_langgraph
+```
+
+Create and activate a virtual environment:
+
+```bash
 python -m venv .venv
-.venv\Scripts\activate
+source .venv/bin/activate
+```
+
+On Windows PowerShell, activate it with:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Install dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
@@ -98,6 +126,26 @@ curl -X POST http://127.0.0.1:8000/api/v1/conversations/<conversation_id>/chat \
   -d '{"message":"Explain dependency injection in simple terms."}'
 ```
 
+Stream a response as server-sent events:
+
+```bash
+curl -N -X POST http://127.0.0.1:8000/api/v1/conversations/<conversation_id>/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Explain dependency injection in simple terms."}'
+```
+
+## API overview
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/v1/health` | Liveness check. |
+| `GET /api/v1/ready` | Database readiness check. |
+| `POST /api/v1/conversations` | Create a conversation. |
+| `GET /api/v1/conversations` | List conversations, optionally by owner. |
+| `GET /api/v1/conversations/{id}/messages` | Read stored messages. |
+| `POST /api/v1/conversations/{id}/chat` | Generate and store a complete reply. |
+| `POST /api/v1/conversations/{id}/chat/stream` | Stream a reply with server-sent events. |
+
 ## Testing
 
 ```bash
@@ -109,3 +157,4 @@ pytest -q
 - This app uses a LangGraph workflow for processing chat requests.
 - The project is structured for local development and production-like deployment via environment-level configuration.
 - Tests avoid calling Groq directly by overriding the LLM dependency.
+- Store credentials only in `.env`; `.env.example` documents the required configuration without exposing secrets.
